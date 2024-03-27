@@ -9,7 +9,8 @@ volumes:
 services:
   ckan:
     container_name: ckan
-    image: ghcr.io/keitaroinc/ckan:${CKAN_VERSION}
+    # image: ghcr.io/keitaroinc/ckan:${CKAN_VERSION}
+    image: ckan-2.10.3
     networks:
       - frontend
       - backend

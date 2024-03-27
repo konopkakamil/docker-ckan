@@ -72,6 +72,12 @@ ENV DEFAULT_EXTENSIONS envvars
 # Locations and tags, please use specific tags or revisions
 ENV ENVVARS_GIT_URL=https://github.com/okfn/ckanext-envvars
 ENV ENVVARS_GIT_BRANCH=0.0.1
+ENV HARVEST_GIT_URL=https://github.com/ckan/ckanext-harvest
+ENV HARVEST_GIT_BRANCH=v1.5.6
+ENV DCAT_GIT_URL=https://github.com/ckan/ckanext-dcat
+ENV DCAT_GIT_BRANCH=v1.5.1
+ENV OAUTH2_GIT_URL=https://gitlab.com/urban-dataspace-platform/use_cases/ckan/ckanext-oauth2-py3
+ENV OAUTH2_GIT_BRANCH=v0.7.0
 
 RUN apk add --no-cache \
         git \
@@ -88,6 +94,18 @@ RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/pip/2.7/get-pip.py &
 
 # Fetch and build the default CKAN extensions
 RUN pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#egg=ckanext-envvars
+#CKAN Harvester
+RUN pip wheel --wheel-dir=/wheels git+${HARVEST_GIT_URL}@${HARVEST_GIT_BRANCH}#egg=ckanext-harvest
+RUN pip wheel --wheel-dir=/wheels -r https://raw.githubusercontent.com/ckan/ckanext-harvest/${HARVEST_GIT_BRANCH}/requirements.txt
+RUN curl -o /wheels/harvest.txt https://raw.githubusercontent.com/ckan/ckanext-harvest/${HARVEST_GIT_BRANCH}/requirements.txt
+#CKAN DCAT extension
+RUN pip wheel --wheel-dir=/wheels git+${DCAT_GIT_URL}@${DCAT_GIT_BRANCH}#egg=ckanext-dcat
+RUN pip wheel --wheel-dir=/wheels -r https://raw.githubusercontent.com/ckan/ckanext-dcat/${DCAT_GIT_BRANCH}/requirements.txt
+RUN curl -o /wheels/dcat.txt https://raw.githubusercontent.com/ckan/ckanext-dcat/${DCAT_GIT_BRANCH}/requirements.txt
+#CKAN OAUTH2 extension
+RUN pip wheel --wheel-dir=/wheels git+${OAUTH2_GIT_URL}@${OAUTH2_GIT_BRANCH}#egg=ckanext-oauth2
+RUN pip wheel --wheel-dir=/wheels -r https://gitlab.com/urban-dataspace-platform/use_cases/ckan/ckanext-oauth2-py3/-/raw/${OAUTH2_GIT_BRANCH}/requirements/install.pip
+RUN curl -o /wheels/oauth2.txt https://gitlab.com/urban-dataspace-platform/use_cases/ckan/ckanext-oauth2-py3/-/raw/${OAUTH2_GIT_BRANCH}/requirements/install.pip
 
 ############
 ### MAIN ###
@@ -103,7 +121,7 @@ ENV CKAN_DIR=${SRC_DIR}/ckan
 ENV DATA_DIR=/srv/app/data
 ENV PIP_SRC=${SRC_DIR}
 ENV CKAN_SITE_URL=http://localhost:5000
-ENV CKAN__PLUGINS envvars image_view text_view recline_view datastore datapusher
+ENV CKAN__PLUGINS oauth2 envvars image_view text_view recline_view datastore datapusher harvest ckan_harvester dcat dcat_rdf_harvester dcat_json_harvester dcat_json_interface structured_data 
 
 # Install necessary packages to run CKAN
 RUN apk add --no-cache git \
@@ -146,6 +164,15 @@ RUN pip install -e /srv/app/src/ckan && \
     pip install --no-index --find-links=/srv/app/wheels -r requirements.txt && \
     # Install default CKAN extensions
     pip install --no-index --find-links=/srv/app/ext_wheels ckanext-envvars && \
+	#CKAN harvester
+    pip install --no-index --find-links=/srv/app/ext_wheels ckanext-harvest && \
+    pip install --no-index --find-links=/srv/app/ext_wheels -r /srv/app/ext_wheels/harvest.txt && \
+    #CKAN DCAT
+    pip install --no-index --find-links=/srv/app/ext_wheels ckanext-dcat && \
+    pip install --no-index --find-links=/srv/app/ext_wheels -r /srv/app/ext_wheels/dcat.txt && \
+	#CKAN OAUTH2
+    pip install --no-index --find-links=/srv/app/ext_wheels ckanext-oauth2 && \
+    pip install --no-index --find-links=/srv/app/ext_wheels -r /srv/app/ext_wheels/oauth2.txt && \
     # Create and update CKAN config
     # Set timezone
     echo "UTC" >  /etc/timezone && \
@@ -153,6 +180,21 @@ RUN pip install -e /srv/app/src/ckan && \
     paster --plugin=ckan make-config ckan ${APP_DIR}/production.ini && \
     paster --plugin=ckan config-tool ${APP_DIR}/production.ini "beaker.session.secret = " && \
     paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.plugins = ${CKAN__PLUGINS}" && \
+	# Configure CKAN OAUTH2
+	paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.register_url = https://YOUR_OAUTH_SERVICE/users/sign_up" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.reset_url = https://YOUR_OAUTH_SERVICE/users/password/new" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.edit_url = https://YOUR_OAUTH_SERVICE/settings" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.authorization_endpoint = https://mytutilo2.ddns.net/realms/myrealm/protocol/openid-connect/auth" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.token_endpoint = https://mytutilo2.ddns.net/realms/myrealm/protocol/openid-connect/token" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.profile_api_url = https://YOUR_OAUTH_SERVICE/user" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.client_id = myclient" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.client_secret = o23cJkWDBVONaZUUfVBULvB7PG12Si9S" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.scope = profile openid email" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.rememberer_name = auth_tkt" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.profile_api_user_field = JSON_FIELD_TO_FIND_THE_USER_IDENTIFIER" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.profile_api_fullname_field = JSON_FIELD_TO_FIND_THE_USER_FULLNAME" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.profile_api_mail_field = JSON_FIELD_TO_FIND_THE_USER_MAIL" && \
+    paster --plugin=ckan config-tool ${APP_DIR}/production.ini "ckan.oauth2.authorization_header = OAUTH2_HEADER" && \
     # Set the default level for extensions to INFO
     paster --plugin=ckan config-tool ${APP_DIR}/production.ini -s logger_ckanext -e level=INFO && \
     # Create the data directory

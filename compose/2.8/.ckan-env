@@ -15,7 +15,7 @@ CKAN___BEAKER__SESSION__SECRET=CHANGE_ME
 CKAN___API_TOKEN__JWT__ENCODE__SECRET=string:CHANGE_ME
 CKAN___API_TOKEN__JWT__DECODE__SECRET=string:CHANGE_ME
 # CKAN Plugins
-CKAN__PLUGINS=envvars image_view text_view recline_view datastore datapusher
+CKAN__PLUGINS=oauth2 envvars image_view text_view recline_view datastore datapusher harvest ckan_harvester dcat dcat_rdf_harvester dcat_json_harvester dcat_json_interface structured_data
 # CKAN requires storage path to be set in order for filestore to be enabled
 CKAN__STORAGE_PATH=/srv/app/data
 CKAN__WEBASSETS__PATH=/srv/app/data/webassets
@@ -34,3 +34,15 @@ CKAN_SMTP_MAIL_FROM=ckan@localhost
 # Datapusher configuration
 CKAN__DATAPUSHER__URL=http://datapusher:8000
 CKAN__DATAPUSHER__CALLBACK_URL_BASE=http://ckan:5000/
+
+# OAuth2 configuration
+CKAN_OAUTH2_AUTHORIZATION_ENDPOINT=https://mytutilo2.ddns.net/realms/myrealm/protocol/openid-connect/auth
+CKAN_OAUTH2_TOKEN_ENDPOINT=https://mytutilo2.ddns.net/realms/myrealm/protocol/openid-connect/token
+CKAN_OAUTH2_CLIENT_ID=myclient
+CKAN_OAUTH2_CLIENT_SECRET=o23cJkWDBVONaZUUfVBULvB7PG12Si9S
+CKAN_OAUTH2_PROFILE_API_URL=https://mytutilo2.ddns.net/realms/myrealm/protocol/openid-connect/userinfo
+CKAN_OAUTH2_PROFILE_API_USER_FIELD=preferred_username
+CKAN_OAUTH2_PROFILE_API_MAIL_FIELD=email
+CKAN_OAUTH2_PROFILE_API_FULLNAME_FIELD=preferred_username
+CKAN_OAUTH2_SCOPE=profile openid email
+CKAN_OAUTH2_AUTHORIZATION_HEADER=Bearer
